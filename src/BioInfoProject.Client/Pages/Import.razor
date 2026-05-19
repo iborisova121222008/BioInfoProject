@@ -1,0 +1,225 @@
+@page "/import"
+@using BioInfoProject.Client.Services
+@using BioInfoProject.Shared.DTOs
+@inject BioInfoApiClient ApiClient
+
+<PageTitle>Import CSV</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-1">Import Biomedical CSV</h1>
+            <p class="text-muted mb-0">Upload epidemiological time-series datasets for separate analysis.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="border rounded bg-white p-4">
+                <label class="form-label fw-semibold" for="csvFile">CSV file</label>
+                <InputFile id="csvFile" class="form-control" OnChange="OnFileSelected" accept=".csv" />
+
+                @if (selectedFile is not null)
+                {
+                    <div class="small text-muted mt-2">
+                        Selected: @selectedFile.Name (@FormatFileSize(selectedFile.Size))
+                    </div>
+                }
+
+                <button class="btn btn-primary mt-3" @onclick="ImportFileAsync" disabled="@(!CanImport)">
+                    @if (isUploading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        <span>Importing</span>
+                    }
+                    else
+                    {
+                        <span>Import CSV</span>
+                    }
+                </button>
+
+                @if (importResult is not null)
+                {
+                    <div class="alert @(importResult.Success ? "alert-success" : "alert-danger") mt-4 mb-0">
+                        <div class="fw-semibold">@importResult.Message</div>
+
+                        @if (importResult.Success)
+                        {
+                            <div class="small mt-2">
+                                Dataset ID: @importResult.DatasetId<br />
+                                Imported rows: @importResult.ImportedRows<br />
+                                Skipped rows: @importResult.SkippedRows
+                            </div>
+                        }
+
+                        @if (importResult.Errors.Count > 0)
+                        {
+                            <ul class="small mt-2 mb-0">
+                                @foreach (var error in importResult.Errors.Take(8))
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="border rounded bg-white p-4">
+                <h2 class="h5 mb-3">Required Columns</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var column in requiredColumns)
+                    {
+                        <span class="badge text-bg-light border">@column</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="border rounded bg-white p-4 mt-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 class="h5 mb-0">Imported Datasets</h2>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadDatasetsAsync" disabled="@isLoadingDatasets">
+                Refresh
+            </button>
+        </div>
+
+        @if (isLoadingDatasets)
+        {
+            <div class="text-muted">Loading datasets...</div>
+        }
+        else if (datasets.Count == 0)
+        {
+            <div class="text-muted">No datasets have been imported yet.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Rows</th>
+                            <th>Countries</th>
+                            <th>Regions</th>
+                            <th>Date Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dataset in datasets)
+                        {
+                            <tr>
+                                <td>@dataset.OriginalFileName</td>
+                                <td>@dataset.RowCount</td>
+                                <td>@dataset.CountryCount</td>
+                                <td>@dataset.RegionCount</td>
+                                <td>@FormatDateRange(dataset)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly string[] requiredColumns =
+    [
+        "date_reported",
+        "country_code",
+        "country",
+        "who_region",
+        "new_cases",
+        "cumulative_cases",
+        "new_deaths",
+        "cumulative_deaths"
+    ];
+
+    private IBrowserFile? selectedFile;
+    private ImportResultDto? importResult;
+    private IReadOnlyList<DatasetDto> datasets = Array.Empty<DatasetDto>();
+    private bool isUploading;
+    private bool isLoadingDatasets;
+
+    private bool CanImport => selectedFile is not null && !isUploading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDatasetsAsync();
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        selectedFile = args.File;
+        importResult = null;
+    }
+
+    private async Task ImportFileAsync()
+    {
+        if (selectedFile is null)
+        {
+            return;
+        }
+
+        isUploading = true;
+        importResult = null;
+
+        try
+        {
+            importResult = await ApiClient.ImportCsvAsync(selectedFile);
+
+            if (importResult.Success)
+            {
+                selectedFile = null;
+                await LoadDatasetsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            importResult = new ImportResultDto
+            {
+                Success = false,
+                Message = $"Import failed: {ex.Message}"
+            };
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private async Task LoadDatasetsAsync()
+    {
+        isLoadingDatasets = true;
+
+        try
+        {
+            datasets = await ApiClient.GetDatasetsAsync();
+        }
+        finally
+        {
+            isLoadingDatasets = false;
+        }
+    }
+
+    private static string FormatFileSize(long size)
+    {
+        return size < 1024 * 1024
+            ? $"{size / 1024.0:F1} KB"
+            : $"{size / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private static string FormatDateRange(DatasetDto dataset)
+    {
+        if (!dataset.MinDate.HasValue || !dataset.MaxDate.HasValue)
+        {
+            return "-";
+        }
+
+        return $"{dataset.MinDate:yyyy-MM-dd} to {dataset.MaxDate:yyyy-MM-dd}";
+    }
+}

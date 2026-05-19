@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+
+# SQLite runtime files
+*.db-shm
+*.db-wal
+
+# Local export/test artifacts
+export-smoke-test.csv

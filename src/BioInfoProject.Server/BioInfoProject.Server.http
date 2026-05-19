@@ -1,0 +1,6 @@
+@BioInfoProject.Server_HostAddress = http://localhost:5293
+
+GET {{BioInfoProject.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

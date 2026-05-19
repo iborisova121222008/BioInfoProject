@@ -1,0 +1,301 @@
+@page "/"
+@using BioInfoProject.Client.Services
+@using BioInfoProject.Shared.DTOs
+@using BioInfoProject.Shared.Requests
+@inject BioInfoApiClient ApiClient
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-1">Biomedical Data Dashboard</h1>
+            <p class="text-muted mb-0">Summary analytics for the selected imported dataset.</p>
+        </div>
+    </div>
+
+    <div class="border rounded bg-white p-3 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-5">
+                <label class="form-label" for="dataset">Dataset</label>
+                <select id="dataset" class="form-select" @bind="selectedDatasetId" @bind:after="OnDatasetChangedAsync">
+                    <option value="0">Select dataset</option>
+                    @foreach (var dataset in datasets)
+                    {
+                        <option value="@dataset.Id">@dataset.OriginalFileName (@dataset.RowCount rows)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6 col-lg-2">
+                <label class="form-label" for="country">Country</label>
+                <select id="country" class="form-select" @bind="filter.Country">
+                    <option value="">All countries</option>
+                    @foreach (var country in countries)
+                    {
+                        <option value="@country">@country</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6 col-lg-2">
+                <label class="form-label" for="region">WHO region</label>
+                <select id="region" class="form-select" @bind="filter.WhoRegion">
+                    <option value="">All regions</option>
+                    @foreach (var region in regions)
+                    {
+                        <option value="@region">@region</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <button class="btn btn-primary" @onclick="LoadAnalyticsAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                    Apply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-muted">Loading analytics...</div>
+    }
+    else if (selectedDatasetId == 0)
+    {
+        <div class="alert alert-info">Import or select a dataset to view dashboard analytics.</div>
+    }
+    else if (statistics is not null)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total new cases</div>
+                    <div class="metric-value">@statistics.TotalNewCases.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Cumulative cases</div>
+                    <div class="metric-value">@statistics.MaxCumulativeCases.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Total new deaths</div>
+                    <div class="metric-value">@statistics.TotalNewDeaths.ToString("N0")</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-label">Cumulative deaths</div>
+                    <div class="metric-value">@statistics.MaxCumulativeDeaths.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-7">
+                <div class="border rounded bg-white p-3 chart-panel">
+                    <h2 class="h5 mb-3">Cases and Deaths Over Time</h2>
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+            </div>
+            <div class="col-xl-5">
+                <div class="border rounded bg-white p-3 chart-panel">
+                    <h2 class="h5 mb-3">Top Countries by Cases</h2>
+                    <canvas id="countryCasesChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded bg-white p-3 chart-panel mb-4">
+            <h2 class="h5 mb-3">Cases by WHO Region</h2>
+            <canvas id="regionCasesChart"></canvas>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-6">
+                <div class="border rounded bg-white p-3">
+                    <h2 class="h5 mb-3">Highest Case Count Countries</h2>
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th class="text-end">Total cases</th>
+                                <th class="text-end">Cumulative</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var country in countrySummaries.Take(8))
+                            {
+                                <tr>
+                                    <td>@country.Country</td>
+                                    <td class="text-end">@country.TotalNewCases.ToString("N0")</td>
+                                    <td class="text-end">@country.MaxCumulativeCases.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-xl-6">
+                <div class="border rounded bg-white p-3">
+                    <h2 class="h5 mb-3">WHO Region Comparison</h2>
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Region</th>
+                                <th class="text-end">Countries</th>
+                                <th class="text-end">Total cases</th>
+                                <th class="text-end">Total deaths</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var region in regionSummaries)
+                            {
+                                <tr>
+                                    <td>@region.WhoRegion</td>
+                                    <td class="text-end">@region.CountryCount</td>
+                                    <td class="text-end">@region.TotalNewCases.ToString("N0")</td>
+                                    <td class="text-end">@region.TotalNewDeaths.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="border rounded bg-white p-3 mt-4">
+            <h2 class="h5 mb-3">Time-Series Preview</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">New cases</th>
+                            <th class="text-end">New deaths</th>
+                            <th class="text-end">Cumulative cases</th>
+                            <th class="text-end">Cumulative deaths</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var point in timeSeries.Take(10))
+                        {
+                            <tr>
+                                <td>@point.Date.ToString("yyyy-MM-dd")</td>
+                                <td class="text-end">@point.NewCases.ToString("N0")</td>
+                                <td class="text-end">@point.NewDeaths.ToString("N0")</td>
+                                <td class="text-end">@point.CumulativeCases.ToString("N0")</td>
+                                <td class="text-end">@point.CumulativeDeaths.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<DatasetDto> datasets = Array.Empty<DatasetDto>();
+    private IReadOnlyList<string> countries = Array.Empty<string>();
+    private IReadOnlyList<string> regions = Array.Empty<string>();
+    private IReadOnlyList<CountrySummaryDto> countrySummaries = Array.Empty<CountrySummaryDto>();
+    private IReadOnlyList<RegionSummaryDto> regionSummaries = Array.Empty<RegionSummaryDto>();
+    private IReadOnlyList<TimeSeriesPointDto> timeSeries = Array.Empty<TimeSeriesPointDto>();
+    private DashboardStatisticsDto? statistics;
+    private AnalyticsFilterRequest filter = new();
+    private int selectedDatasetId;
+    private bool isLoading;
+    private bool chartsNeedRender;
+
+    protected override async Task OnInitializedAsync()
+    {
+        datasets = await ApiClient.GetDatasetsAsync();
+
+        if (datasets.Count > 0)
+        {
+            selectedDatasetId = datasets[0].Id;
+            await OnDatasetChangedAsync();
+        }
+    }
+
+    private async Task OnDatasetChangedAsync()
+    {
+        filter = new AnalyticsFilterRequest
+        {
+            DatasetId = selectedDatasetId
+        };
+
+        if (selectedDatasetId == 0)
+        {
+            statistics = null;
+            countries = Array.Empty<string>();
+            regions = Array.Empty<string>();
+            return;
+        }
+
+        countries = await ApiClient.GetCountriesAsync(selectedDatasetId);
+        regions = await ApiClient.GetRegionsAsync(selectedDatasetId);
+        await LoadAnalyticsAsync();
+    }
+
+    private async Task LoadAnalyticsAsync()
+    {
+        if (selectedDatasetId == 0)
+        {
+            return;
+        }
+
+        isLoading = true;
+        filter.DatasetId = selectedDatasetId;
+
+        try
+        {
+            statistics = await ApiClient.GetDashboardStatisticsAsync(filter);
+            countrySummaries = await ApiClient.GetCountrySummariesAsync(filter);
+            regionSummaries = await ApiClient.GetRegionSummariesAsync(filter);
+            timeSeries = await ApiClient.GetTimeSeriesAsync(filter);
+            chartsNeedRender = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!chartsNeedRender || statistics is null)
+        {
+            return;
+        }
+
+        chartsNeedRender = false;
+
+        await JsRuntime.InvokeVoidAsync(
+            "bioInfoCharts.renderLineChart",
+            "timeSeriesChart",
+            timeSeries.Select(point => point.Date.ToString("yyyy-MM-dd")).ToArray(),
+            timeSeries.Select(point => point.NewCases).ToArray(),
+            timeSeries.Select(point => point.NewDeaths).ToArray());
+
+        var topCountries = countrySummaries.Take(8).ToArray();
+        await JsRuntime.InvokeVoidAsync(
+            "bioInfoCharts.renderBarChart",
+            "countryCasesChart",
+            topCountries.Select(country => country.Country).ToArray(),
+            topCountries.Select(country => country.TotalNewCases).ToArray(),
+            "Total new cases",
+            "#1f77b4");
+
+        await JsRuntime.InvokeVoidAsync(
+            "bioInfoCharts.renderBarChart",
+            "regionCasesChart",
+            regionSummaries.Select(region => region.WhoRegion).ToArray(),
+            regionSummaries.Select(region => region.TotalNewCases).ToArray(),
+            "Total new cases",
+            "#2ca02c");
+    }
+}

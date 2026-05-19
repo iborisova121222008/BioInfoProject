@@ -1,0 +1,311 @@
+@page "/data"
+@using BioInfoProject.Client.Services
+@using BioInfoProject.Shared.DTOs
+@using BioInfoProject.Shared.Requests
+@inject BioInfoApiClient ApiClient
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Data Browser</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-1">Biomedical Data Browser</h1>
+            <p class="text-muted mb-0">Select an imported dataset and inspect cleaned epidemiological records.</p>
+        </div>
+    </div>
+
+    <div class="border rounded bg-white p-3 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-4">
+                <label class="form-label" for="dataset">Dataset</label>
+                <select id="dataset" class="form-select" @bind="selectedDatasetId" @bind:after="OnDatasetChangedAsync">
+                    <option value="0">Select dataset</option>
+                    @foreach (var dataset in datasets)
+                    {
+                        <option value="@dataset.Id">@dataset.OriginalFileName (@dataset.RowCount rows)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="country">Country</label>
+                <select id="country" class="form-select" @bind="filter.Country">
+                    <option value="">All countries</option>
+                    @foreach (var country in countries)
+                    {
+                        <option value="@country">@country</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="region">WHO region</label>
+                <select id="region" class="form-select" @bind="filter.WhoRegion">
+                    <option value="">All regions</option>
+                    @foreach (var region in regions)
+                    {
+                        <option value="@region">@region</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="startDate">Start date</label>
+                <input id="startDate" class="form-control" type="date" value="@startDateText" @onchange="OnStartDateChanged" />
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="endDate">End date</label>
+                <input id="endDate" class="form-control" type="date" value="@endDateText" @onchange="OnEndDateChanged" />
+            </div>
+            <div class="col-md-8 col-lg-4">
+                <label class="form-label" for="search">Search</label>
+                <input id="search" class="form-control" placeholder="Country, code, or region" @bind="filter.SearchTerm" />
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label" for="pageSize">Page size</label>
+                <select id="pageSize" class="form-select" @bind="filter.PageSize">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-md-8 col-lg-6 d-flex gap-2">
+                <button class="btn btn-primary" @onclick="ApplyFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                    Apply filters
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="ClearFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                    Clear
+                </button>
+                <button class="btn btn-outline-success" @onclick="ExportAsync" disabled="@(selectedDatasetId == 0 || isLoading || isExporting)">
+                    @(isExporting ? "Exporting" : "Export CSV")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-muted">Loading records...</div>
+    }
+    else if (selectedDatasetId == 0)
+    {
+        <div class="alert alert-info">Import or select a dataset to browse its records.</div>
+    }
+    else if (records is null || records.TotalCount == 0)
+    {
+        <div class="alert alert-warning">No records match the current filters.</div>
+    }
+    else
+    {
+        <div class="border rounded bg-white">
+            <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+                <div class="text-muted small">
+                    Showing page @records.Page of @records.TotalPages, @records.TotalCount total records
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" @onclick="PreviousPageAsync" disabled="@(records.Page <= 1)">Previous</button>
+                    <button class="btn btn-outline-secondary" @onclick="NextPageAsync" disabled="@(records.Page >= records.TotalPages)">Next</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("DateReported")'>Date</button></th>
+                            <th><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("Country")'>Country</button></th>
+                            <th>Code</th>
+                            <th><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("WhoRegion")'>WHO region</button></th>
+                            <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("NewCases")'>New cases</button></th>
+                            <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("CumulativeCases")'>Cumulative cases</button></th>
+                            <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("NewDeaths")'>New deaths</button></th>
+                            <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("CumulativeDeaths")'>Cumulative deaths</button></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in records.Items)
+                        {
+                            <tr>
+                                <td>@record.DateReported.ToString("yyyy-MM-dd")</td>
+                                <td>@record.Country</td>
+                                <td>@record.CountryCode</td>
+                                <td>@record.WhoRegion</td>
+                                <td class="text-end">@record.NewCases.ToString("N0")</td>
+                                <td class="text-end">@record.CumulativeCases.ToString("N0")</td>
+                                <td class="text-end">@record.NewDeaths.ToString("N0")</td>
+                                <td class="text-end">@record.CumulativeDeaths.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<DatasetDto> datasets = Array.Empty<DatasetDto>();
+    private IReadOnlyList<string> countries = Array.Empty<string>();
+    private IReadOnlyList<string> regions = Array.Empty<string>();
+    private PagedResultDto<EpidemiologicalRecordDto>? records;
+    private RecordFilterRequest filter = new();
+    private int selectedDatasetId;
+    private string? startDateText;
+    private string? endDateText;
+    private bool isLoading;
+    private bool isExporting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        datasets = await ApiClient.GetDatasetsAsync();
+
+        if (datasets.Count > 0)
+        {
+            selectedDatasetId = datasets[0].Id;
+            await OnDatasetChangedAsync();
+        }
+    }
+
+    private async Task OnDatasetChangedAsync()
+    {
+        filter = new RecordFilterRequest
+        {
+            DatasetId = selectedDatasetId,
+            Page = 1,
+            PageSize = filter.PageSize
+        };
+        startDateText = null;
+        endDateText = null;
+        records = null;
+
+        if (selectedDatasetId == 0)
+        {
+            countries = Array.Empty<string>();
+            regions = Array.Empty<string>();
+            return;
+        }
+
+        countries = await ApiClient.GetCountriesAsync(selectedDatasetId);
+        regions = await ApiClient.GetRegionsAsync(selectedDatasetId);
+        await LoadRecordsAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        filter.Page = 1;
+        await LoadRecordsAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        filter = new RecordFilterRequest
+        {
+            DatasetId = selectedDatasetId,
+            Page = 1,
+            PageSize = filter.PageSize
+        };
+        startDateText = null;
+        endDateText = null;
+        await LoadRecordsAsync();
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        filter.Page = Math.Max(1, filter.Page - 1);
+        await LoadRecordsAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        filter.Page += 1;
+        await LoadRecordsAsync();
+    }
+
+    private async Task SortAsync(string sortBy)
+    {
+        if (filter.SortBy == sortBy)
+        {
+            filter.SortDirection = filter.SortDirection == "asc" ? "desc" : "asc";
+        }
+        else
+        {
+            filter.SortBy = sortBy;
+            filter.SortDirection = "asc";
+        }
+
+        filter.Page = 1;
+        await LoadRecordsAsync();
+    }
+
+    private async Task LoadRecordsAsync()
+    {
+        if (selectedDatasetId == 0)
+        {
+            return;
+        }
+
+        isLoading = true;
+        filter.DatasetId = selectedDatasetId;
+        filter.StartDate = ParseDate(startDateText);
+        filter.EndDate = ParseDate(endDateText);
+
+        try
+        {
+            records = await ApiClient.GetFilteredRecordsAsync(filter);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        if (selectedDatasetId == 0)
+        {
+            return;
+        }
+
+        isExporting = true;
+        filter.DatasetId = selectedDatasetId;
+        filter.StartDate = ParseDate(startDateText);
+        filter.EndDate = ParseDate(endDateText);
+
+        try
+        {
+            await ApiClient.ExportRecordsAsync(new ExportRequest
+            {
+                DatasetId = filter.DatasetId,
+                Country = filter.Country,
+                WhoRegion = filter.WhoRegion,
+                StartDate = filter.StartDate,
+                EndDate = filter.EndDate,
+                SearchTerm = filter.SearchTerm,
+                SortBy = filter.SortBy,
+                SortDirection = filter.SortDirection,
+                Page = filter.Page,
+                PageSize = filter.PageSize
+            }, JsRuntime);
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private void OnStartDateChanged(ChangeEventArgs args)
+    {
+        startDateText = args.Value?.ToString();
+    }
+
+    private void OnEndDateChanged(ChangeEventArgs args)
+    {
+        endDateText = args.Value?.ToString();
+    }
+
+    private static DateOnly? ParseDate(string? value)
+    {
+        return DateOnly.TryParse(value, out var date)
+            ? date
+            : null;
+    }
+}
