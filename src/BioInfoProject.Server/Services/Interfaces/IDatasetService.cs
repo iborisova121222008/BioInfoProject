@@ -7,4 +7,6 @@ public interface IDatasetService
     Task<IReadOnlyList<DatasetDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
     Task<DatasetDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

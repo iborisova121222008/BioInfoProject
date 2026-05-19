@@ -51,6 +51,12 @@ public class BioInfoApiClient
             cancellationToken) ?? Array.Empty<DatasetDto>();
     }
 
+    public async Task DeleteDatasetAsync(int datasetId, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.DeleteAsync($"api/datasets/{datasetId}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<PagedResultDto<EpidemiologicalRecordDto>?> GetFilteredRecordsAsync(
         RecordFilterRequest request,
         CancellationToken cancellationToken = default)

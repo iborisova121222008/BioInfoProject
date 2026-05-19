@@ -67,6 +67,13 @@
                         }
                     </div>
                 }
+
+                @if (!string.IsNullOrWhiteSpace(deleteStatusMessage))
+                {
+                    <div class="alert @(isDeleteStatusSuccess ? "alert-success" : "alert-danger") mt-3 mb-0">
+                        @deleteStatusMessage
+                    </div>
+                }
             </div>
         </div>
 
@@ -110,6 +117,7 @@
                             <th>Countries</th>
                             <th>Regions</th>
                             <th>Date Range</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,6 +129,15 @@
                                 <td>@dataset.CountryCount</td>
                                 <td>@dataset.RegionCount</td>
                                 <td>@FormatDateRange(dataset)</td>
+                                <td class="text-end">
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            title="Delete dataset"
+                                            aria-label="Delete dataset"
+                                            @onclick="() => AskDeleteDataset(dataset)">
+                                        &times;
+                                    </button>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -129,6 +146,30 @@
         }
     </div>
 </div>
+
+@if (showDeleteDialog)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5">Delete dataset</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteDataset"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Delete '@datasetPendingDeletion?.OriginalFileName' and all related epidemiological records?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelDeleteDataset">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteDatasetAsync">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private readonly string[] requiredColumns =
@@ -148,6 +189,10 @@
     private IReadOnlyList<DatasetDto> datasets = Array.Empty<DatasetDto>();
     private bool isUploading;
     private bool isLoadingDatasets;
+    private bool showDeleteDialog;
+    private bool isDeleteStatusSuccess;
+    private string? deleteStatusMessage;
+    private DatasetDto? datasetPendingDeletion;
 
     private bool CanImport => selectedFile is not null && !isUploading;
 
@@ -207,6 +252,46 @@
         finally
         {
             isLoadingDatasets = false;
+        }
+    }
+
+    private void AskDeleteDataset(DatasetDto dataset)
+    {
+        datasetPendingDeletion = dataset;
+        showDeleteDialog = true;
+    }
+
+    private void CancelDeleteDataset()
+    {
+        showDeleteDialog = false;
+        datasetPendingDeletion = null;
+    }
+
+    private async Task ConfirmDeleteDatasetAsync()
+    {
+        if (datasetPendingDeletion is null)
+        {
+            return;
+        }
+
+        var deletedDataset = datasetPendingDeletion;
+        showDeleteDialog = false;
+
+        try
+        {
+            await ApiClient.DeleteDatasetAsync(deletedDataset.Id);
+            deleteStatusMessage = $"Dataset '{deletedDataset.OriginalFileName}' was deleted successfully.";
+            isDeleteStatusSuccess = true;
+            await LoadDatasetsAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteStatusMessage = $"Could not delete dataset: {ex.Message}";
+            isDeleteStatusSuccess = false;
+        }
+        finally
+        {
+            datasetPendingDeletion = null;
         }
     }
 

@@ -33,6 +33,21 @@ public class DatasetService : IDatasetService
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var dataset = await _dbContext.Datasets
+            .FirstOrDefaultAsync(existingDataset => existingDataset.Id == id, cancellationToken);
+
+        if (dataset is null)
+        {
+            return false;
+        }
+
+        _dbContext.Datasets.Remove(dataset);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private static DatasetDto MapToDto(Dataset dataset)
     {
         return new DatasetDto
