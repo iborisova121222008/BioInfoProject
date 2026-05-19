@@ -7,15 +7,16 @@
 
 <PageTitle>Data Browser</PageTitle>
 
-<div class="container-fluid">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="page-container">
+    <div class="page-header">
         <div>
-            <h1 class="h3 mb-1">Biomedical Data Browser</h1>
-            <p class="text-muted mb-0">Select an imported dataset and inspect cleaned epidemiological records.</p>
+            <p class="eyebrow">Record exploration</p>
+            <h1>Biomedical Data Browser</h1>
+            <p>Select an imported dataset and inspect cleaned epidemiological records.</p>
         </div>
     </div>
 
-    <div class="border rounded bg-white p-3 mb-4">
+    <div class="filter-panel">
         <div class="row g-3 align-items-end">
             <div class="col-lg-4">
                 <label class="form-label" for="dataset">Dataset</label>
@@ -69,13 +70,13 @@
                 </select>
             </div>
             <div class="col-md-8 col-lg-6 d-flex gap-2">
-                <button class="btn btn-primary" @onclick="ApplyFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                <button class="btn btn-primary action-button" @onclick="ApplyFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
                     Apply filters
                 </button>
-                <button class="btn btn-outline-secondary" @onclick="ClearFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                <button class="btn btn-outline-secondary action-button" @onclick="ClearFiltersAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
                     Clear
                 </button>
-                <button class="btn btn-outline-success" @onclick="ExportAsync" disabled="@(selectedDatasetId == 0 || isLoading || isExporting)">
+                <button class="btn btn-outline-success action-button" @onclick="ExportAsync" disabled="@(selectedDatasetId == 0 || isLoading || isExporting)">
                     @(isExporting ? "Exporting" : "Export CSV")
                 </button>
             </div>
@@ -96,14 +97,14 @@
     }
     else
     {
-        <div class="border rounded bg-white">
-            <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+        <div class="content-card table-card">
+            <div class="table-toolbar">
                 <div class="text-muted small">
                     Showing page @records.Page of @records.TotalPages, @records.TotalCount total records
                 </div>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary" @onclick="PreviousPageAsync" disabled="@(records.Page <= 1)">Previous</button>
-                    <button class="btn btn-outline-secondary" @onclick="NextPageAsync" disabled="@(records.Page >= records.TotalPages)">Next</button>
+                <div class="pagination-actions">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="PreviousPageAsync" disabled="@(records.Page <= 1)">Previous</button>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="NextPageAsync" disabled="@(records.Page >= records.TotalPages)">Next</button>
                 </div>
             </div>
 

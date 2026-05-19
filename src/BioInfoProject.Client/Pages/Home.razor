@@ -7,15 +7,16 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="container-fluid">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="page-container">
+    <div class="page-header">
         <div>
-            <h1 class="h3 mb-1">Biomedical Data Dashboard</h1>
-            <p class="text-muted mb-0">Summary analytics for the selected imported dataset.</p>
+            <p class="eyebrow">Biomedical analytics</p>
+            <h1>Biomedical Data Dashboard</h1>
+            <p>Summary analytics for the selected imported dataset.</p>
         </div>
     </div>
 
-    <div class="border rounded bg-white p-3 mb-4">
+    <div class="filter-panel">
         <div class="row g-3 align-items-end">
             <div class="col-lg-5">
                 <label class="form-label" for="dataset">Dataset</label>
@@ -48,7 +49,7 @@
                 </select>
             </div>
             <div class="col-lg-3">
-                <button class="btn btn-primary" @onclick="LoadAnalyticsAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
+                <button class="btn btn-primary action-button" @onclick="LoadAnalyticsAsync" disabled="@(selectedDatasetId == 0 || isLoading)">
                     Apply
                 </button>
             </div>
@@ -67,25 +68,25 @@
     {
         <div class="row g-3 mb-4">
             <div class="col-md-6 col-xl-3">
-                <div class="metric-card">
+                <div class="metric-card metric-card-teal">
                     <div class="metric-label">Total new cases</div>
                     <div class="metric-value">@statistics.TotalNewCases.ToString("N0")</div>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
-                <div class="metric-card">
+                <div class="metric-card metric-card-blue">
                     <div class="metric-label">Cumulative cases</div>
                     <div class="metric-value">@statistics.MaxCumulativeCases.ToString("N0")</div>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
-                <div class="metric-card">
+                <div class="metric-card metric-card-navy">
                     <div class="metric-label">Total new deaths</div>
                     <div class="metric-value">@statistics.TotalNewDeaths.ToString("N0")</div>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
-                <div class="metric-card">
+                <div class="metric-card metric-card-slate">
                     <div class="metric-label">Cumulative deaths</div>
                     <div class="metric-value">@statistics.MaxCumulativeDeaths.ToString("N0")</div>
                 </div>
@@ -94,28 +95,28 @@
 
         <div class="row g-4 mb-4">
             <div class="col-xl-7">
-                <div class="border rounded bg-white p-3 chart-panel">
-                    <h2 class="h5 mb-3">Cases and Deaths Over Time</h2>
+                <div class="content-card chart-panel">
+                    <h2>Cases and Deaths Over Time</h2>
                     <canvas id="timeSeriesChart"></canvas>
                 </div>
             </div>
             <div class="col-xl-5">
-                <div class="border rounded bg-white p-3 chart-panel">
-                    <h2 class="h5 mb-3">Top Countries by Cases</h2>
+                <div class="content-card chart-panel">
+                    <h2>Top Countries by Cases</h2>
                     <canvas id="countryCasesChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="border rounded bg-white p-3 chart-panel mb-4">
-            <h2 class="h5 mb-3">Cases by WHO Region</h2>
+        <div class="content-card chart-panel mb-4">
+            <h2>Cases by WHO Region</h2>
             <canvas id="regionCasesChart"></canvas>
         </div>
 
         <div class="row g-4">
             <div class="col-xl-6">
-                <div class="border rounded bg-white p-3">
-                    <h2 class="h5 mb-3">Highest Case Count Countries</h2>
+                <div class="content-card">
+                    <h2>Highest Case Count Countries</h2>
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
@@ -139,8 +140,8 @@
             </div>
 
             <div class="col-xl-6">
-                <div class="border rounded bg-white p-3">
-                    <h2 class="h5 mb-3">WHO Region Comparison</h2>
+                <div class="content-card">
+                    <h2>WHO Region Comparison</h2>
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
@@ -166,8 +167,8 @@
             </div>
         </div>
 
-        <div class="border rounded bg-white p-3 mt-4">
-            <h2 class="h5 mb-3">Time-Series Preview</h2>
+        <div class="content-card mt-4">
+            <h2>Time-Series Preview</h2>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead>

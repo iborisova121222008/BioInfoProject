@@ -1,36 +1,37 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BIP06 Biomedical Data</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+<header class="app-navbar">
+    <div class="app-navbar-inner">
+        <a class="brand" href="">
+            <img src="images/dna-magnifier.svg" alt="BIP06 logo" />
+            <span>
+                <strong>BIP06</strong>
+                <small>Biomedical Data Management</small>
+            </span>
+        </a>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
+        <button class="nav-toggle" type="button" title="Navigation menu" @onclick="ToggleNavMenu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav class="@NavMenuCssClass">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
+                Dashboard
             </NavLink>
-        </div>
-        <div class="nav-item px-3">
             <NavLink class="nav-link" href="import">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Import CSV
+                Import CSV
             </NavLink>
-        </div>
-        <div class="nav-item px-3">
             <NavLink class="nav-link" href="data">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Data Browser
+                Data Browser
             </NavLink>
-        </div>
-    </nav>
-</div>
+        </nav>
+    </div>
+</header>
 
 @code {
     private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string NavMenuCssClass => collapseNavMenu ? "app-nav collapsed" : "app-nav";
 
     private void ToggleNavMenu()
     {

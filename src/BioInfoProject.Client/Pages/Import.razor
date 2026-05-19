@@ -5,17 +5,21 @@
 
 <PageTitle>Import CSV</PageTitle>
 
-<div class="container-fluid">
-    <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="page-container">
+    <div class="page-header">
         <div>
-            <h1 class="h3 mb-1">Import Biomedical CSV</h1>
-            <p class="text-muted mb-0">Upload epidemiological time-series datasets for separate analysis.</p>
+            <p class="eyebrow">Dataset ingestion</p>
+            <h1>Import Biomedical CSV</h1>
+            <p>Upload epidemiological time-series datasets for separate analysis.</p>
         </div>
     </div>
 
     <div class="row g-4">
         <div class="col-lg-7">
-            <div class="border rounded bg-white p-4">
+            <div class="content-card upload-card">
+                <div class="upload-icon">
+                    <img src="images/dna-magnifier.svg" alt="" />
+                </div>
                 <label class="form-label fw-semibold" for="csvFile">CSV file</label>
                 <InputFile id="csvFile" class="form-control" OnChange="OnFileSelected" accept=".csv" />
 
@@ -26,7 +30,7 @@
                     </div>
                 }
 
-                <button class="btn btn-primary mt-3" @onclick="ImportFileAsync" disabled="@(!CanImport)">
+                <button class="btn btn-primary action-button mt-3" @onclick="ImportFileAsync" disabled="@(!CanImport)">
                     @if (isUploading)
                     {
                         <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -40,7 +44,7 @@
 
                 @if (importResult is not null)
                 {
-                    <div class="alert @(importResult.Success ? "alert-success" : "alert-danger") mt-4 mb-0">
+                    <div class="import-result @(importResult.Success ? "import-result-success" : "import-result-error") mt-4">
                         <div class="fw-semibold">@importResult.Message</div>
 
                         @if (importResult.Success)
@@ -67,22 +71,22 @@
         </div>
 
         <div class="col-lg-5">
-            <div class="border rounded bg-white p-4">
-                <h2 class="h5 mb-3">Required Columns</h2>
-                <div class="d-flex flex-wrap gap-2">
+            <div class="content-card required-card">
+                <h2>Required Columns</h2>
+                <div class="column-list">
                     @foreach (var column in requiredColumns)
                     {
-                        <span class="badge text-bg-light border">@column</span>
+                        <span>@column</span>
                     }
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="border rounded bg-white p-4 mt-4">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h2 class="h5 mb-0">Imported Datasets</h2>
-            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadDatasetsAsync" disabled="@isLoadingDatasets">
+    <div class="content-card table-card mt-4">
+        <div class="table-toolbar">
+            <h2>Imported Datasets</h2>
+            <button class="btn btn-outline-secondary btn-sm action-button" @onclick="LoadDatasetsAsync" disabled="@isLoadingDatasets">
                 Refresh
             </button>
         </div>
