@@ -108,6 +108,11 @@
             </div>
         </div>
 
+        <div class="content-card map-panel mb-4">
+            <h2>Geographic COVID-19 Distribution</h2>
+            <div id="epidemiologyWorldMap" class="world-map"></div>
+        </div>
+
         <div class="content-card chart-panel mb-4">
             <h2>Cases by WHO Region</h2>
             <canvas id="regionCasesChart"></canvas>
@@ -292,11 +297,28 @@
             "#1f77b4");
 
         await JsRuntime.InvokeVoidAsync(
+            "bioInfoMaps.renderWorldMap",
+            "epidemiologyWorldMap",
+            countrySummaries.Select(country => country.Country).ToArray(),
+            countrySummaries.Select(country => country.TotalNewCases).ToArray(),
+            countrySummaries.Select(country => country.MaxCumulativeCases).ToArray(),
+            countrySummaries.Select(country => country.TotalNewDeaths).ToArray(),
+            countrySummaries.Select(country => country.MaxCumulativeDeaths).ToArray(),
+            countrySummaries.Select(country => CalculateMortalityRate(country)).ToArray());
+
+        await JsRuntime.InvokeVoidAsync(
             "bioInfoCharts.renderBarChart",
             "regionCasesChart",
             regionSummaries.Select(region => region.WhoRegion).ToArray(),
             regionSummaries.Select(region => region.TotalNewCases).ToArray(),
             "Total new cases",
             "#2ca02c");
+    }
+
+    private static double CalculateMortalityRate(CountrySummaryDto country)
+    {
+        return country.MaxCumulativeCases == 0
+            ? 0
+            : (double)country.MaxCumulativeDeaths / country.MaxCumulativeCases * 100;
     }
 }

@@ -196,6 +196,20 @@ a,
     height: 18rem;
 }
 
+.map-panel {
+    min-height: 32rem;
+}
+
+.world-map {
+    width: 100%;
+    height: clamp(26rem, 56vw, 34rem);
+    min-height: 26rem;
+}
+
+.world-map .modebar {
+    right: 0.35rem !important;
+}
+
 .table-card {
     padding: 0;
     overflow: hidden;
