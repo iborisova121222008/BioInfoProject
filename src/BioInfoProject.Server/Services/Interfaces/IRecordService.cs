@@ -12,4 +12,11 @@ public interface IRecordService
     Task<IReadOnlyList<string>> GetCountriesAsync(int datasetId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> GetRegionsAsync(int datasetId, CancellationToken cancellationToken = default);
+
+    Task<EpidemiologicalRecordDto?> UpdateAsync(
+        int id,
+        UpdateRecordRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

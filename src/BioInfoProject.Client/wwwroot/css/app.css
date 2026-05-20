@@ -57,6 +57,33 @@ a,
     color: var(--muted);
 }
 
+.role-switch {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.55rem;
+}
+
+.mode-badge {
+    width: fit-content;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.mode-badge-researcher {
+    color: var(--navy-2);
+    background: #f2fbfc;
+    border: 1px solid #c9e8ee;
+}
+
+.mode-badge-admin {
+    color: #7f1d1d;
+    background: #fff0f0;
+    border: 1px solid #f4c4c4;
+}
+
 .eyebrow {
     margin: 0 0 0.4rem !important;
     color: var(--teal) !important;
@@ -397,6 +424,12 @@ code {
 @media (max-width: 767.98px) {
     .page-header {
         align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .role-switch {
+        align-items: flex-start;
+        width: 100%;
     }
 
     .table-toolbar {

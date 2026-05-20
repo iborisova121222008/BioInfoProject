@@ -66,6 +66,21 @@ public class BioInfoApiClient
         return await response.Content.ReadFromJsonAsync<PagedResultDto<EpidemiologicalRecordDto>>(cancellationToken);
     }
 
+    public async Task UpdateRecordAsync(
+        int recordId,
+        UpdateRecordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.PutAsJsonAsync($"api/records/{recordId}", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task DeleteRecordAsync(int recordId, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.DeleteAsync($"api/records/{recordId}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<IReadOnlyList<string>> GetCountriesAsync(
         int datasetId,
         CancellationToken cancellationToken = default)

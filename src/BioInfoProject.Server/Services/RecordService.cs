@@ -63,6 +63,47 @@ public class RecordService : IRecordService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<EpidemiologicalRecordDto?> UpdateAsync(
+        int id,
+        UpdateRecordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await _dbContext.EpidemiologicalRecords
+            .FirstOrDefaultAsync(record => record.Id == id, cancellationToken);
+
+        if (record is null)
+        {
+            return null;
+        }
+
+        record.DateReported = request.DateReported;
+        record.CountryCode = request.CountryCode.Trim();
+        record.Country = request.Country.Trim();
+        record.WhoRegion = request.WhoRegion.Trim();
+        record.NewCases = request.NewCases;
+        record.CumulativeCases = request.CumulativeCases;
+        record.NewDeaths = request.NewDeaths;
+        record.CumulativeDeaths = request.CumulativeDeaths;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return MapToDto(record);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var record = await _dbContext.EpidemiologicalRecords
+            .FirstOrDefaultAsync(record => record.Id == id, cancellationToken);
+
+        if (record is null)
+        {
+            return false;
+        }
+
+        _dbContext.EpidemiologicalRecords.Remove(record);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private static IQueryable<EpidemiologicalRecord> ApplyFilters(
         IQueryable<EpidemiologicalRecord> query,
         RecordFilterRequest request)

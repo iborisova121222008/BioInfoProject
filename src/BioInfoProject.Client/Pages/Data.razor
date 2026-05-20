@@ -14,6 +14,23 @@
             <h1>Biomedical Data Browser</h1>
             <p>Select an imported dataset and inspect cleaned epidemiological records.</p>
         </div>
+        <div class="role-switch">
+            <div class="btn-group" role="group" aria-label="Data browser mode">
+                <button type="button"
+                        class="btn btn-sm @(isAdminMode ? "btn-outline-secondary" : "btn-primary")"
+                        @onclick="DisableAdminMode">
+                    Researcher Mode
+                </button>
+                <button type="button"
+                        class="btn btn-sm @(isAdminMode ? "btn-primary" : "btn-outline-secondary")"
+                        @onclick="EnableAdminMode">
+                    Administrator Mode
+                </button>
+            </div>
+            <div class="mode-badge @(isAdminMode ? "mode-badge-admin" : "mode-badge-researcher")">
+                @(isAdminMode ? "Curation enabled" : "Read-only review")
+            </div>
+        </div>
     </div>
 
     <div class="filter-panel">
@@ -77,11 +94,18 @@
                     Clear
                 </button>
                 <button class="btn btn-outline-success action-button" @onclick="ExportAsync" disabled="@(selectedDatasetId == 0 || isLoading || isExporting)">
-                    @(isExporting ? "Exporting" : "Export CSV")
+                    @(isExporting ? "Exporting" : "Export filtered CSV")
                 </button>
             </div>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="alert @(isStatusSuccess ? "alert-success" : "alert-danger") mb-0">
+            @statusMessage
+        </div>
+    }
 
     @if (isLoading)
     {
@@ -120,6 +144,10 @@
                             <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("CumulativeCases")'>Cumulative cases</button></th>
                             <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("NewDeaths")'>New deaths</button></th>
                             <th class="text-end"><button class="btn btn-link btn-sm p-0" @onclick='() => SortAsync("CumulativeDeaths")'>Cumulative deaths</button></th>
+                            @if (isAdminMode)
+                            {
+                                <th class="text-end">Actions</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -134,6 +162,23 @@
                                 <td class="text-end">@record.CumulativeCases.ToString("N0")</td>
                                 <td class="text-end">@record.NewDeaths.ToString("N0")</td>
                                 <td class="text-end">@record.CumulativeDeaths.ToString("N0")</td>
+                                @if (isAdminMode)
+                                {
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    @onclick="() => OpenEditDialog(record)">
+                                                Edit
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    @onclick="() => AskDeleteRecord(record)">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>
@@ -142,6 +187,94 @@
         </div>
     }
 </div>
+
+@if (showEditDialog && editRecord is not null)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5">Edit epidemiological record</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseEditDialog"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(editErrorMessage))
+                    {
+                        <div class="alert alert-danger">@editErrorMessage</div>
+                    }
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="editDate">Date reported</label>
+                            <input id="editDate" class="form-control" type="date" value="@editDateText" @onchange="OnEditDateChanged" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editCountryCode">Country code</label>
+                            <input id="editCountryCode" class="form-control" @bind="editRecord.CountryCode" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editWhoRegion">WHO region</label>
+                            <input id="editWhoRegion" class="form-control" @bind="editRecord.WhoRegion" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label" for="editCountry">Country</label>
+                            <input id="editCountry" class="form-control" @bind="editRecord.Country" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editNewCases">New cases</label>
+                            <InputNumber id="editNewCases" class="form-control" @bind-Value="editRecord.NewCases" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editCumulativeCases">Cumulative cases</label>
+                            <InputNumber id="editCumulativeCases" class="form-control" @bind-Value="editRecord.CumulativeCases" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editNewDeaths">New deaths</label>
+                            <InputNumber id="editNewDeaths" class="form-control" @bind-Value="editRecord.NewDeaths" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="editCumulativeDeaths">Cumulative deaths</label>
+                            <InputNumber id="editCumulativeDeaths" class="form-control" @bind-Value="editRecord.CumulativeDeaths" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseEditDialog" disabled="@isSavingRecord">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveRecordAsync" disabled="@isSavingRecord">
+                        @(isSavingRecord ? "Saving" : "Save changes")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteDialog)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5">Delete record</h2>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDeleteRecord"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">
+                        Delete the record for '@recordPendingDeletion?.Country' on @recordPendingDeletion?.DateReported.ToString("yyyy-MM-dd")?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelDeleteRecord" disabled="@isDeletingRecord">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteRecordAsync" disabled="@isDeletingRecord">
+                        @(isDeletingRecord ? "Deleting" : "Delete")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private IReadOnlyList<DatasetDto> datasets = Array.Empty<DatasetDto>();
@@ -154,6 +287,18 @@
     private string? endDateText;
     private bool isLoading;
     private bool isExporting;
+    private bool isAdminMode;
+    private bool showEditDialog;
+    private bool showDeleteDialog;
+    private bool isSavingRecord;
+    private bool isDeletingRecord;
+    private int editingRecordId;
+    private string? editDateText;
+    private string? editErrorMessage;
+    private string? statusMessage;
+    private bool isStatusSuccess;
+    private UpdateRecordRequest? editRecord;
+    private EpidemiologicalRecordDto? recordPendingDeletion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -177,6 +322,9 @@
         startDateText = null;
         endDateText = null;
         records = null;
+        ClearStatus();
+        CloseEditDialog();
+        CancelDeleteRecord();
 
         if (selectedDatasetId == 0)
         {
@@ -259,6 +407,135 @@
         }
     }
 
+    private void EnableAdminMode()
+    {
+        isAdminMode = true;
+        SetStatus("Administrator Mode enabled. Record edit and delete actions are now available.", true);
+    }
+
+    private void DisableAdminMode()
+    {
+        isAdminMode = false;
+        CloseEditDialog();
+        CancelDeleteRecord();
+        SetStatus("Researcher Mode enabled. Records are read-only.", true);
+    }
+
+    private void OpenEditDialog(EpidemiologicalRecordDto record)
+    {
+        editingRecordId = record.Id;
+        editDateText = record.DateReported.ToString("yyyy-MM-dd");
+        editErrorMessage = null;
+        editRecord = new UpdateRecordRequest
+        {
+            DateReported = record.DateReported,
+            CountryCode = record.CountryCode,
+            Country = record.Country,
+            WhoRegion = record.WhoRegion,
+            NewCases = record.NewCases,
+            CumulativeCases = record.CumulativeCases,
+            NewDeaths = record.NewDeaths,
+            CumulativeDeaths = record.CumulativeDeaths
+        };
+        showEditDialog = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        showEditDialog = false;
+        isSavingRecord = false;
+        editingRecordId = 0;
+        editDateText = null;
+        editErrorMessage = null;
+        editRecord = null;
+    }
+
+    private async Task SaveRecordAsync()
+    {
+        if (editRecord is null)
+        {
+            return;
+        }
+
+        var date = ParseDate(editDateText);
+        if (!date.HasValue)
+        {
+            editErrorMessage = "A valid reported date is required.";
+            return;
+        }
+
+        editRecord.DateReported = date.Value;
+
+        if (!IsValidRecord(editRecord, out var validationMessage))
+        {
+            editErrorMessage = validationMessage;
+            return;
+        }
+
+        isSavingRecord = true;
+        editErrorMessage = null;
+
+        try
+        {
+            await ApiClient.UpdateRecordAsync(editingRecordId, editRecord);
+            CloseEditDialog();
+            SetStatus("Record updated successfully. Analytics will use the corrected database values.", true);
+            await RefreshLookupsAndRecordsAsync();
+        }
+        catch (Exception ex)
+        {
+            editErrorMessage = $"Could not update record: {ex.Message}";
+        }
+        finally
+        {
+            isSavingRecord = false;
+        }
+    }
+
+    private void AskDeleteRecord(EpidemiologicalRecordDto record)
+    {
+        recordPendingDeletion = record;
+        showDeleteDialog = true;
+    }
+
+    private void CancelDeleteRecord()
+    {
+        showDeleteDialog = false;
+        isDeletingRecord = false;
+        recordPendingDeletion = null;
+    }
+
+    private async Task ConfirmDeleteRecordAsync()
+    {
+        if (recordPendingDeletion is null)
+        {
+            return;
+        }
+
+        isDeletingRecord = true;
+        var deletedRecord = recordPendingDeletion;
+
+        try
+        {
+            await ApiClient.DeleteRecordAsync(deletedRecord.Id);
+            CancelDeleteRecord();
+            SetStatus($"Deleted the record for {deletedRecord.Country} on {deletedRecord.DateReported:yyyy-MM-dd}.", true);
+            await RefreshLookupsAndRecordsAsync();
+        }
+        catch (Exception ex)
+        {
+            CancelDeleteRecord();
+            SetStatus($"Could not delete record: {ex.Message}", false);
+        }
+    }
+
+    private async Task RefreshLookupsAndRecordsAsync()
+    {
+        countries = await ApiClient.GetCountriesAsync(selectedDatasetId);
+        regions = await ApiClient.GetRegionsAsync(selectedDatasetId);
+        await LoadRecordsAsync();
+    }
+
     private async Task ExportAsync()
     {
         if (selectedDatasetId == 0)
@@ -301,6 +578,46 @@
     private void OnEndDateChanged(ChangeEventArgs args)
     {
         endDateText = args.Value?.ToString();
+    }
+
+    private void OnEditDateChanged(ChangeEventArgs args)
+    {
+        editDateText = args.Value?.ToString();
+    }
+
+    private static bool IsValidRecord(UpdateRecordRequest record, out string message)
+    {
+        if (string.IsNullOrWhiteSpace(record.CountryCode) ||
+            string.IsNullOrWhiteSpace(record.Country) ||
+            string.IsNullOrWhiteSpace(record.WhoRegion))
+        {
+            message = "Country code, country, and WHO region are required.";
+            return false;
+        }
+
+        if (record.NewCases < 0 ||
+            record.CumulativeCases < 0 ||
+            record.NewDeaths < 0 ||
+            record.CumulativeDeaths < 0)
+        {
+            message = "Cases and deaths cannot be negative.";
+            return false;
+        }
+
+        message = string.Empty;
+        return true;
+    }
+
+    private void SetStatus(string message, bool success)
+    {
+        statusMessage = message;
+        isStatusSuccess = success;
+    }
+
+    private void ClearStatus()
+    {
+        statusMessage = null;
+        isStatusSuccess = false;
     }
 
     private static DateOnly? ParseDate(string? value)
