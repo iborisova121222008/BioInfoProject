@@ -19,7 +19,7 @@
     <div class="filter-panel">
         <div class="row g-3 align-items-end">
             <div class="col-lg-4">
-                <label class="form-label" for="dataset">Преглед на данни</label>
+                <label class="form-label" for="dataset">Browse Dataset</label>
                 <select id="dataset" class="form-select" @bind="selectedDatasetId" @bind:after="OnDatasetChangedAsync">
                     <option value="0">Select dataset</option>
                     @foreach (var dataset in datasets)

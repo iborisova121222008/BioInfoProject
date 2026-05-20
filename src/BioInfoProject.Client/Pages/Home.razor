@@ -16,10 +16,10 @@
         </div>
     </div>
 
-    <div class="filter-panel
+    <div class="filter-panel">
         <div class="row g-3 align-items-end">
             <div class="col-lg-5">
-                <label class="form-label" for="dataset">Анализи</label>
+                <label class="form-label" for="dataset">Select dataset</label>
                 <select id="dataset" class="form-select" @bind="selectedDatasetId" @bind:after="OnDatasetChangedAsync">
                     <option value="0">Select dataset</option>
                     @foreach (var dataset in datasets)
