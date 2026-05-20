@@ -5,7 +5,7 @@
 @inject BioInfoApiClient ApiClient
 @inject IJSRuntime JsRuntime
 
-<PageTitle>Dashboard</PageTitle>
+<PageTitle>Анализи</PageTitle>
 
 <div class="page-container">
     <div class="page-header">
@@ -16,10 +16,10 @@
         </div>
     </div>
 
-    <div class="filter-panel">
+    <div class="filter-panel
         <div class="row g-3 align-items-end">
             <div class="col-lg-5">
-                <label class="form-label" for="dataset">Dataset</label>
+                <label class="form-label" for="dataset">Анализи</label>
                 <select id="dataset" class="form-select" @bind="selectedDatasetId" @bind:after="OnDatasetChangedAsync">
                     <option value="0">Select dataset</option>
                     @foreach (var dataset in datasets)
